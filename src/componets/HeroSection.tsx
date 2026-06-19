@@ -2,9 +2,15 @@
 import React from 'react'
 import { motion } from "motion/react"
 import { Bike, Bus, Car, Truck } from 'lucide-react'
+import { useSelector } from 'react-redux'
+import { RootState } from '@/redux/store'
+import { useRouter } from 'next/navigation'
 
 function HeroSection({authRequired}:{authRequired:()=>void}) {
-   
+
+   const router = useRouter()
+   const {userData} = useSelector((state:RootState)=>state.user)
+
   return (
     <div className='relative min-h-screen w-full overflow-hidden'>
       <div className='absolute inset-0 bg-cover bg-center' style={{backgroundImage:"url('/heroImage.jpg')"}}>
@@ -17,7 +23,7 @@ function HeroSection({authRequired}:{authRequired:()=>void}) {
             transition={{duration:0.6}}
             className='text-white font-extrabold text-4xl sm:text-5xl md:text:7xl'
           >
-            Book an vechile
+            Book an vehicle
           </motion.div>
           
           <motion.p
@@ -43,7 +49,7 @@ function HeroSection({authRequired}:{authRequired:()=>void}) {
            whileHover={{scale:1.05}}
            whileTap={{scale:0.95}}
            className='mt-12 px-10 py-4 bg-white text-black rounded-full font-semibold shadow-xl'
-           onClick={authRequired}
+           onClick={()=>{!userData ? authRequired() : router.push('/user/book')}}
           >
             Book now
           </motion.button>

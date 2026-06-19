@@ -74,7 +74,7 @@ function AuthModal({ open, onClose }: propType) {
   }
   try {
     setLoading(true)
-    const { data } = await axios.post("/api/auth/verify-otp", {
+    const { data } = await axios.post("/api/auth/verify-email", {
       email,
       otp: code, // <-- was `code`, now matches the API's expected key
     })
@@ -84,6 +84,7 @@ function AuthModal({ open, onClose }: propType) {
       setEmail("")
       setStep("login")
     } else {
+       clearOtp()
       toast.error(data.message || "Invalid code, please try again")
     }
   } catch (error: unknown) {
@@ -118,7 +119,7 @@ function AuthModal({ open, onClose }: propType) {
         redirect: false,
       })
       if (res?.ok) {
-        toast.success("Login successful")
+        toast.success("Login successfully!!")
         clearFields()
         onClose()
       } else {
@@ -142,10 +143,6 @@ function AuthModal({ open, onClose }: propType) {
         name, email, password
       })
       if (data.success) {
-        // Keep email in state — the OTP step needs it, and clearing
-        // name/password is fine since registration already submitted them.
-        setName("")
-        setPassword("")
         setStep("otp")
       } else {
         toast.error(data.message || "Unexpected error, please try again")
