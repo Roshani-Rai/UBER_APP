@@ -1,4 +1,4 @@
-// ✅ Complete augmentation
+
 import { DefaultSession } from "next-auth"
 
 declare module "next-auth" {
@@ -9,7 +9,7 @@ declare module "next-auth" {
     user: {
       id: string
       role: string
-    } & DefaultSession["user"]  // keeps default fields (name, email, image)
+    } & DefaultSession["user"]  
   }
 }
 

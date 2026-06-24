@@ -3,14 +3,28 @@ import { createSlice } from '@reduxjs/toolkit'
 import type { PayloadAction } from '@reduxjs/toolkit'
 
 
+type VideoKycStatus=
+"not_required" |
+"pending" |
+"in_progress" | 
+"approved" |
+"rejected"
+
 export interface IUser {
   _id?: string
   name: string
   email: string
+  partnerStep:number
+  mobileNumber?: string 
   role: "user" | "partner" | "admin"
   isEmailVerified: boolean
+  rejectionReason:string
+  partnerStatus:"pending" | "approved" | "rejected"
   createdAt?: Date
   updatedAt?: Date
+  videoKycStatus:VideoKycStatus,
+    videoKycRoomId:string,
+    videoKycRejectionReason:string,
 }
 // Define a type for the slice state
 interface IuserState {

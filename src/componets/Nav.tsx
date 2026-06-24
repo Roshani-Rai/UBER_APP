@@ -7,10 +7,11 @@ import { usePathname, useRouter } from 'next/navigation'
 import AuthModal from './AuthModal'
 import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '@/redux/store'
-import { Bike, Car, ChevronRight, LogOut, Menu, Truck, X } from 'lucide-react'
+import { Bike, Car, ChevronRight, LogOut, Menu, Truck, X, FileText } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { setUserData } from '@/redux/userSlice'
 import { toast } from 'react-toastify'
+
 
 function Nav() {
   const { userData } = useSelector((state: RootState) => state.user)
@@ -22,7 +23,7 @@ function Nav() {
   const pathname = usePathname()
   const navitem = ["Home", "Booking", "About Us", "Contact Us"]
   const dispatch = useDispatch()
-
+  
   const handleLogout = async () => {
     try {
       await signOut({ redirect: false })
@@ -34,6 +35,9 @@ function Nav() {
       toast.error("Something went wrong")
     }
   }
+
+  // ✅ Check if user has completed onboarding (partnerStep >= 3)
+  const isPartnerComplete = userData?.partnerStep >= 1
 
   return (
     <>
@@ -67,7 +71,7 @@ function Nav() {
             <div className='relative'>
               {!userData ? (
                 <button
-                  className='px-4 py-1.5 pb-2 text-semibold rounded-full bg-white text-black text-sm '
+                  className='px-4 py-1.5 pb-2 text-semibold rounded-full bg-white text-black text-sm'
                   onClick={() => setOpen(true)}
                 >
                   Login
@@ -91,19 +95,51 @@ function Nav() {
                       >
                         <div className='p-5'>
                           <p className='font-semibold text-lg'>{userData.name}</p>
-                          <p className='px-1 text-xs upercase text-gray-500 mb-4'>{userData.role}</p>
-                          {userData.role != 'partner' && (
-                            <div className='w-full flex items-center gap-3 py-3 hover:bg-gray-200 hover:cursor-pointer hover:font-bold rounded-xl' onClick={()=>router.push("/partner/onboarding/vehicle")}>
-                              <div className='flex -space-x-2'>
-                                <div className='w-6 h-6 rounded-full bg-black text-white flex items-center justify-center'> <Car size={14} /></div>
-                                <div className='w-6 h-6 rounded-full bg-black text-white flex items-center justify-center'> <Bike size={14} /></div>
-                                <div className='w-6 h-6 rounded-full bg-black text-white flex items-center justify-center'> <Truck size={14} /></div>
-                              </div>
-                              Become a Partner
-                              <ChevronRight size={16}></ChevronRight>
-                            </div>
+                          <p className='px-1 text-xs uppercase text-gray-500 mb-4'>{userData.role}</p>
+
+                          {/* ✅ Show based on partner completion */}
+                          {userData.role !== 'admin' && (
+                            <>
+                              {isPartnerComplete ? (
+                                // ✅ Show View & Update Details
+                                <div
+                                  className='w-full flex items-center gap-3 py-3 px-2 hover:bg-gray-100 hover:cursor-pointer rounded-xl'
+                                  onClick={() => {
+                                    router.push("/partner/onboarding/vehicle")
+                                    setProfile(false)
+                                  }}
+                                >
+                                  <div className='w-6 h-6 rounded-full bg-black text-white flex items-center justify-center'>
+                                    <FileText size={14} />
+                                  </div>
+                                  <span className='text-sm font-medium'>View & Update Details</span>
+                                  <ChevronRight size={16} className='ml-auto' />
+                                </div>
+                              ) : (
+                                // ✅ Show Become a Partner
+                                <div
+                                  className='w-full flex items-center gap-3 py-3 hover:bg-gray-200 hover:cursor-pointer hover:font-bold rounded-xl'
+                                  onClick={() => {
+                                    router.push("/partner/onboarding/vehicle")
+                                    setProfile(false)
+                                  }}
+                                >
+                                  <div className='flex -space-x-2'>
+                                    <div className='w-6 h-6 rounded-full bg-black text-white flex items-center justify-center'><Car size={14} /></div>
+                                    <div className='w-6 h-6 rounded-full bg-black text-white flex items-center justify-center'><Bike size={14} /></div>
+                                    <div className='w-6 h-6 rounded-full bg-black text-white flex items-center justify-center'><Truck size={14} /></div>
+                                  </div>
+                                  Become a Partner
+                                  <ChevronRight size={16} />
+                                </div>
+                              )}
+                            </>
                           )}
-                          <button className='px-3 w-full flex items-center gap-3 py-3 hover:bg-gray-200 font-bold rounded-xl mt-2' onClick={handleLogout}>
+
+                          <button
+                            className='px-3 w-full flex items-center gap-3 py-3 hover:bg-gray-200 font-bold rounded-xl mt-2'
+                            onClick={handleLogout}
+                          >
                             <LogOut size={16} />
                             Logout
                           </button>
@@ -115,7 +151,6 @@ function Nav() {
               )}
             </div>
 
-            {/* Mobile hamburger toggle */}
             <button
               className='md:hidden w-10 h-10 flex items-center justify-center rounded-full bg-white text-black'
               onClick={() => setMobileOpen(true)}
@@ -127,7 +162,6 @@ function Nav() {
         </div>
       </motion.div>
 
-      {/* Mobile full-screen drawer */}
       <AnimatePresence>
         {mobileOpen && (
           <>

@@ -4,8 +4,10 @@ import HeroSection from './HeroSection'
 import VehicleSlider from './VehicleSlider'
 import AuthModal from './AuthModal'
 
+
 function PublicHome() {
     const [authOpen,setAuthOpen] = useState(false)
+  
 
   return (
     <>

@@ -105,33 +105,37 @@ function AuthModal({ open, onClose }: propType) {
     clearFields()
     setStep(newStep)
   }
+const handleLogin = async () => {
+  if (!email || !password) {
+    toast.error("Please fill in all fields")
+    return
+  }
+  try {
+    setLoading(true)
+    const res = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    })
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      toast.error("Please fill in all fields")
+    if (res?.error) {
+      // ✅ Check error first — not just ok
+      toast.error("Invalid email or password")
       return
     }
-    try {
-      setLoading(true)
-      const res = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      })
-      if (res?.ok) {
-        toast.success("Login successfully!!")
-        clearFields()
-        onClose()
-      } else {
-        toast.error("Invalid email or password")
-      }
-    } catch (error) {
-      toast.error("Something went wrong")
-    } finally {
-      setLoading(false)
-    }
-  }
 
+    if (res?.ok) {
+      toast.success("Login successfully!!")
+      clearFields()
+      onClose()
+    }
+
+  } catch (error) {
+    toast.error("Something went wrong")
+  } finally {
+    setLoading(false)
+  }
+}
   const handleSignUp = async () => {
     if (!name || !email || !password) {
       toast.error("Please fill in all fields")
