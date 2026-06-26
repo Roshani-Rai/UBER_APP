@@ -10,6 +10,7 @@ interface IPartnerBank{
     status:"not_added" | "verified" | "added",
     createdAt:Date,
     updatedAt:Date,
+    bankUpdated:boolean
     
 }
 
@@ -39,7 +40,7 @@ status:{
     enum:["not_added","verified","added"],
     default:"not_added"
   },
- 
+ bankUpdated: { type: Boolean, default: false }
 
 },{timestamps:true})
 

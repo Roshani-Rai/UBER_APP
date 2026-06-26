@@ -10,6 +10,7 @@ interface IPartnerDocs{
     rejectionReason?:string,
     createdAt:Date,
     updatedAt:Date,
+ docsUpdated:boolean
 }
 
 const partnerDocsSchema = new mongoose.Schema<IPartnerDocs>({
@@ -17,6 +18,7 @@ const partnerDocsSchema = new mongoose.Schema<IPartnerDocs>({
     type:mongoose.Schema.Types.ObjectId,
     ref:"User"
   },
+  docsUpdated: { type: Boolean, default: false },
  
   rejectionReason:{
     type:String,

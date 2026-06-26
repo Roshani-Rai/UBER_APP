@@ -22,15 +22,32 @@ export async function GET (
              }
 
        const vehicleId = (await context.params).id 
-       const vehicle = await Vehicle.findById(vehicleId).populate('owner')
+       const vehicle = await Vehicle.findById(vehicleId)
 
        if(!vehicle ){
          return Response.json({message:"Vehicle not found",success:false})
        }
 
-       return Response.json(vehicle,{status:200})
+       vehicle.status='approved'
+       vehicle.rejectionReason=undefined
+
+       await vehicle.save()
+
+      const partner = await User.findById(vehicle.owner)
+
+       if(!partner ){
+         return Response.json({message:"Partner not found",success:false})
+       }
+
+
+       if(partner.partnerStep < 8)
+       partner.partnerStep=8
+
+       await partner.save()
+
+       return Response.json({message:"Vehicle approved successfully!!" ,success:true})
 
     } catch (error) {
-         return Response.json({message:`Vehicle review error ${error}`,success:false}) 
+         return Response.json({message:`Vehicle approve error ${error}`,success:false}) 
     }
 }

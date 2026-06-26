@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, User, CreditCard, Landmark, Phone, QrCode, Clock, CircleDashed } from 'lucide-react'
+import { ArrowLeft, User, CreditCard, Landmark, Phone, QrCode, Clock, CircleDashed, CheckCircle2, ArrowRight } from 'lucide-react'
 import axios from 'axios'
 import { toast } from 'react-toastify'
 import { useDispatch, useSelector } from 'react-redux'
@@ -21,10 +21,10 @@ function page() {
   const [upiId, setUpiId] = useState("")
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(true)
+  const [submitted, setSubmitted] = useState(false)
+  const [isUpdate, setIsUpdate] = useState(false)  // ✅ track if already submitted
   const [touched, setTouched] = useState<Record<string, boolean>>({})
-
-  // ✅ Fetch existing bank data on mount
-  useEffect(() => {
+useEffect(() => {
     const fetchBank = async () => {
       try {
         const { data } = await axios.get("/api/auth/partner/onboarding/bank")
@@ -33,9 +33,13 @@ function page() {
           setAccountNumber(data.partnerBank.accountNumber || "")
           setIfsc(data.partnerBank.ifsc || "")
           setUpiId(data.partnerBank.upi || "")
+          setIsUpdate(true)
+          setSubmitted(true)
         }
-        // ✅ phone is stored on user model not partnerBank
-        if (userData?.mobileNumber) {
+        // ✅ fetch phone from API, fallback to redux
+        if (data.mobileNumber) {
+          setPhone(data.mobileNumber)
+        } else if (userData?.mobileNumber) {
           setPhone(userData.mobileNumber)
         }
       } catch (error) {
@@ -60,8 +64,10 @@ function page() {
   const canContinue = isNameValid && isAccountValid && isIfscValid && isMobileValid && isUpiValid
 
   const handleBlur = (field: string) => {
-    setTouched((prev) => ({ ...prev, [field]: true }))
+    setTouched(prev => ({ ...prev, [field]: true }))
   }
+
+  const markChanged = () => setSubmitted(false)  // ✅ reset when user edits
 
   const fieldClass = (isValid: boolean, field: string, isEmpty: boolean) => {
     const base = 'w-full rounded-xl border pl-10 pr-4 py-3 text-sm text-black placeholder:text-gray-400 outline-none transition'
@@ -81,7 +87,6 @@ function page() {
       phone: true,
       upiId: true,
     })
-
     if (!canContinue) return
 
     setLoading(true)
@@ -99,15 +104,16 @@ function page() {
         return
       }
 
-      toast.success("Bank details saved successfully")
+      toast.success(data.isUpdate ? "Bank details updated successfully!" : "Bank details saved successfully!")
+      setSubmitted(true)
+      setIsUpdate(true)
       dispatch(setUserData({
         ...userData,
         partnerStep: 4,
-        mobileNumber: phone,  // ✅ update phone in redux too
+        mobileNumber: phone,
       }))
 
     } catch (error: any) {
-      console.log(error)
       toast.error(error?.response?.data?.message || "Something went wrong")
     } finally {
       setLoading(false)
@@ -139,7 +145,9 @@ function page() {
 
           <p className='text-xs text-gray-500 font-medium'>Step 3 of 3</p>
           <h1 className='text-2xl font-bold mt-1 text-black'>Bank & Payout Setup</h1>
-          <p className='text-sm text-gray-500 mt-2'>Used for partner payouts</p>
+          <p className='text-sm text-gray-500 mt-2'>
+            {isUpdate ? 'Update your bank details' : 'Used for partner payouts'}
+          </p>
 
           <div className='flex gap-1.5 justify-center mt-4'>
             {[0, 1, 2].map((i) => (
@@ -149,6 +157,14 @@ function page() {
         </div>
 
         <div className='mt-8 space-y-5'>
+
+          {/* ✅ Already submitted badge */}
+          {isUpdate && (
+            <div className='flex items-center gap-2 px-4 py-2.5 rounded-xl bg-green-50 border border-green-100 text-green-700 text-xs font-medium'>
+              <CheckCircle2 size={14} />
+              Bank details already submitted — you can update below
+            </div>
+          )}
 
           {/* Account Holder */}
           <div>
@@ -160,7 +176,7 @@ function page() {
               <input
                 type="text"
                 value={accountHolder}
-                onChange={(e) => setAccountHolder(e.target.value)}
+                onChange={(e) => { setAccountHolder(e.target.value); markChanged() }}
                 onBlur={() => handleBlur("accountHolder")}
                 placeholder="As per bank records"
                 className={fieldClass(isNameValid, "accountHolder", accountHolder.trim() === "")}
@@ -183,7 +199,7 @@ function page() {
                 type="text"
                 inputMode="numeric"
                 value={accountNumber}
-                onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ""))}
+                onChange={(e) => { setAccountNumber(e.target.value.replace(/\D/g, "")); markChanged() }}
                 onBlur={() => handleBlur("accountNumber")}
                 placeholder="e.g. 123456789012"
                 className={fieldClass(isAccountValid, "accountNumber", accountNumber.trim() === "")}
@@ -205,7 +221,7 @@ function page() {
               <input
                 type="text"
                 value={ifsc}
-                onChange={(e) => setIfsc(e.target.value.toUpperCase())}
+                onChange={(e) => { setIfsc(e.target.value.toUpperCase()); markChanged() }}
                 onBlur={() => handleBlur("ifsc")}
                 placeholder="e.g. SBIN0001234"
                 className={fieldClass(isIfscValid, "ifsc", ifsc.trim() === "")}
@@ -227,7 +243,7 @@ function page() {
               <input
                 type="tel"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+                onChange={(e) => { setPhone(e.target.value.replace(/\D/g, "")); markChanged() }}
                 onBlur={() => handleBlur("phone")}
                 placeholder="e.g. 9876543210"
                 className={fieldClass(isMobileValid, "phone", phone.trim() === "")}
@@ -249,7 +265,7 @@ function page() {
               <input
                 type="text"
                 value={upiId}
-                onChange={(e) => setUpiId(e.target.value)}
+                onChange={(e) => { setUpiId(e.target.value); markChanged() }}
                 onBlur={() => handleBlur("upiId")}
                 placeholder="e.g. name@okaxis"
                 className={fieldClass(isUpiValid, "upiId", upiId.trim() === "")}
@@ -266,19 +282,37 @@ function page() {
             <span>Bank details are verified before your first payout. This usually takes 24–48 hours.</span>
           </div>
 
-          <motion.button
-            type="button"
-            disabled={loading}
-            whileTap={{ scale: 0.98 }}
-            onClick={handleSubmit}
-            className={`w-full flex items-center justify-center rounded-xl py-3 text-xs font-semibold transition-colors ${
-              canContinue
-                ? 'bg-black text-white hover:bg-gray-900'
-                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            }`}
-          >
-            {loading ? <CircleDashed size={16} className='text-white animate-spin' /> : "Save Changes"}
-          </motion.button>
+          {/* ✅ Show next step button when submitted and no changes pending */}
+          {submitted ? (
+            <motion.button
+              type="button"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              onClick={() => router.push('/partner')}
+              className='w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold bg-black text-white hover:bg-gray-900 transition-colors'
+            >
+              <CheckCircle2 size={17} />
+              Go to Dashboard
+              <ArrowRight size={17} />
+            </motion.button>
+          ) : (
+            <motion.button
+              type="button"
+              disabled={loading}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleSubmit}
+              className={`w-full flex items-center justify-center rounded-xl py-3 text-sm font-semibold transition-colors ${
+                canContinue
+                  ? 'bg-black text-white hover:bg-gray-900'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              {loading
+                ? <CircleDashed size={16} className='text-white animate-spin' />
+                : isUpdate ? 'Update Bank Details' : 'Save & Continue'
+              }
+            </motion.button>
+          )}
         </div>
       </motion.div>
     </div>

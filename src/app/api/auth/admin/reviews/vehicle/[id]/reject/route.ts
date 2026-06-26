@@ -9,7 +9,7 @@ import { NextRequest } from "next/server";
 
 
 
-export async function GET (
+export async function POST (
     req:NextRequest,
     context:{params:Promise<{id:string}>}
 ){
@@ -22,15 +22,22 @@ export async function GET (
              }
 
        const vehicleId = (await context.params).id 
-       const vehicle = await Vehicle.findById(vehicleId).populate('owner')
+       const vehicle = await Vehicle.findById(vehicleId)
 
        if(!vehicle ){
          return Response.json({message:"Vehicle not found",success:false})
        }
+       
+       const {reason} = await req.json()
 
-       return Response.json(vehicle,{status:200})
+       vehicle.status='rejected'
+       vehicle.rejectionReason=reason
+
+       await vehicle.save()
+
+       return Response.json({message:"Vehicle rejected successfully!!" ,success:true})
 
     } catch (error) {
-         return Response.json({message:`Vehicle review error ${error}`,success:false}) 
+         return Response.json({message:`Vehicle reject error ${error}`,success:false}) 
     }
 }

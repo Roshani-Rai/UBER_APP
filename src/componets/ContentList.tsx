@@ -1,9 +1,12 @@
 "use client"
-import React from 'react'
+import React, { useState ,useEffect} from 'react'
 import { motion } from "motion/react"
 import { CheckCircle2, Clock, FileText, Truck, Video, Users, XCircle, ArrowRight } from 'lucide-react'
 import axios from 'axios'
 import { useRouter } from 'next/navigation'
+import { useDispatch,useSelector } from 'react-redux'
+import { setUserData } from '@/redux/userSlice';
+import { RootState } from '@/redux/store';
 
 
 
@@ -145,12 +148,14 @@ function PartnerCard({
 }
 
 function KycCard({ item, index }: { item: any; index: number }) {
-  const videoUrl: string | undefined = item.videoUrl
+  const router = useRouter()
+  const dispatch = useDispatch()
+ const { userData } = useSelector((state: RootState) => state.user)
 
-  const handleStartKyc = async()=>{
+  const handleStartKyc = async () => {
     try {
-      const {data} = await axios.get(`/api/auth/admin/video-kyc/start/${item._id}`)
-     window.location.reload()
+      const { data } = await axios.get(`/api/auth/admin/video-kyc/start/${item._id}`)
+      dispatch(setUserData({...userData,videKycRoomId:data.roomId}))
     } catch (error) {
       console.log(error)
     }
@@ -189,30 +194,32 @@ function KycCard({ item, index }: { item: any; index: number }) {
       </div>
 
       <div className="flex items-center gap-2 flex-shrink-0">
-       {
-        item.videoKycStatus ==="pending" ?(
-           <motion.div
-       whileTap={{scale:0.96}}
-       onClick={handleStartKyc}
-       className='cursor-pointer flex items-center gap-2 px-4 py-2 rounded-xl bg-neutral-950 hover:bg-neutral-800 text-white text-sm font-semibold transition-colors'
-       >
-        Start Video KYC <ArrowRight size={15} />
-       </motion.div>
-        ):item.videoKycStatus ==="in_progress" ?(
-           <motion.div
-       whileTap={{scale:0.96}}
-       className='cursor-pointer flex items-center gap-2 px-4 py-2 rounded-xl bg-neutral-950 hover:bg-neutral-800 text-white text-sm font-semibold transition-colors'
-       >
-        Join call <ArrowRight size={15} />
-       </motion.div>
-        ): <motion.div
-       whileTap={{scale:0.96}}
-       className='cursor-pointer flex items-center gap-2 px-4 py-2 rounded-xl bg-neutral-950 hover:bg-neutral-800 text-white text-sm font-semibold transition-colors'
-       >
-        Review <ArrowRight size={15} />
-       </motion.div>
-      }
-      </div>
+  {item.videoKycStatus === 'pending' ? (
+    <motion.div
+      whileTap={{ scale: 0.96 }}
+      onClick={handleStartKyc}
+      className='cursor-pointer flex items-center gap-2 px-4 py-2 rounded-xl bg-neutral-950 hover:bg-neutral-800 text-white text-sm font-semibold transition-colors'
+    >
+      Start Video KYC <ArrowRight size={15} />
+    </motion.div>
+  ) : item.videoKycStatus === 'in_progress' ? (
+    <motion.div
+      whileTap={{ scale: 0.96 }}
+      onClick={() => router.push(`/video-kyc/${item.videoKycRoomId}`)}
+      className='cursor-pointer flex items-center gap-2 px-4 py-2 rounded-xl bg-neutral-950 hover:bg-neutral-800 text-white text-sm font-semibold transition-colors'
+    >
+      Join Call <ArrowRight size={15} />
+    </motion.div>
+  ) : (
+    <motion.div
+      whileTap={{ scale: 0.96 }}
+      className='cursor-pointer flex items-center gap-2 px-4 py-2 rounded-xl bg-neutral-950 hover:bg-neutral-800 text-white text-sm font-semibold transition-colors'
+    >
+      Review <ArrowRight size={15} />
+    </motion.div>
+  )}
+</div>
+       
     </motion.div>
   )
 }
@@ -233,18 +240,20 @@ function VehicleCard({ item, index }: { item: any; index: number }) {
       <div className="flex-1 min-w-0">
         <div className="flex flex-wrap items-center gap-2 mb-0.5">
           <p className="text-sm font-semibold text-gray-900 truncate">
-            {item.vehicleNumber ?? item.registrationNumber ?? 'Unknown Vehicle'}
+           {item.owner.name ?? item.fullName ?? 'Unnamed Partner'}
           </p>
           <StatusBadge status={item.status ?? 'pending'} />
         </div>
         <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-gray-500">
-          {item.vehicleType && <span>{item.vehicleType}</span>}
-          {item.ownerName && <span>Owner: {item.ownerName}</span>}
-          {item.submittedAt && (
+           {item.owner.email && <span>{item.owner.email}</span>}
+          {item.owner.phone && <span>{item.owner.phone}</span>}
+          {item.owner.city && <span>{item.owner.city}</span>}
+          {item.createdAt && (
             <span>
-              {new Date(item.submittedAt).toLocaleDateString('en-IN', {
+              {new Date(item.createdAt).toLocaleDateString('en-IN', {
                 day: 'numeric',
                 month: 'short',
+                year: 'numeric',
               })}
             </span>
           )}

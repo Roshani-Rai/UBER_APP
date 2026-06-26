@@ -1,4 +1,6 @@
 import React from 'react'
+import { ArrowRight } from 'lucide-react'
+import { AnimatePresence,motion } from 'motion/react'
 
 function ActionCard({ icon, title, button, onClick }: { 
   icon: React.ReactNode
@@ -7,7 +9,11 @@ function ActionCard({ icon, title, button, onClick }: {
   onClick: () => void 
 }) {
   return (
-    <div className="w-full rounded-2xl border border-blue-100 bg-blue-50 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <AnimatePresence>
+    <motion.div
+    initial={{opacity:0,y:30}}
+    animate={{opacity:1,y:0}}
+    className="w-full rounded-2xl border border-blue-100 bg-blue-50 p-5 flex items-center justify-between gap-4">
       
       {/* Left */}
       <div className="flex items-center gap-3">
@@ -23,9 +29,11 @@ function ActionCard({ icon, title, button, onClick }: {
         className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 transition active:scale-95 flex-shrink-0"
       >
         {button}
+        <ArrowRight size={13} />
       </button>
 
-    </div>
+    </motion.div>
+    </AnimatePresence>
   )
 }
 

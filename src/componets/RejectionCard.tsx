@@ -20,16 +20,16 @@ function RejectionCard({ title, reason, actionLabel, onAction }: any) {
       <div className="rounded-xl border border-red-100 bg-white px-4 py-3 flex flex-col gap-1">
         <span className="text-xs text-gray-400 font-medium">Rejection Reason</span>
         <p className="text-sm text-gray-700 font-medium leading-relaxed">
-          {reason || 'No reason provided.'}
+          {reason }
         </p>
       </div>
 
       {/* Action */}
       {actionLabel && onAction && (
         <button
-          onClick={onAction}
-          className="w-full py-2.5 rounded-xl bg-red-600 text-white text-xs font-semibold hover:bg-red-700 transition active:scale-95"
-        >
+  onClick={onAction}
+  className="self-start px-5 py-2 rounded-xl bg-red-600 text-white text-xs font-semibold hover:bg-red-700 transition active:scale-95"
+>
           {actionLabel}
         </button>
       )}

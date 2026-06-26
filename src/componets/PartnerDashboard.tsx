@@ -4,10 +4,14 @@ import { motion } from "motion/react"
 import { useSelector } from 'react-redux'
 import { RootState } from '@/redux/store'
 import { useRouter } from 'next/navigation'
-import { Check, Clock, Lock, Video } from 'lucide-react'
+import { Check, Clock, Lock, Rocket, Video } from 'lucide-react'
 import RejectionCard from './RejectionCard'
 import StatusCard from './StatusCard'
 import ActionCard from './ActionCard'
+import axios from 'axios'
+import { toast } from 'react-toastify'
+import { IVehicle } from '@/app/modals/vehicle.modals'
+import Pricing from './Pricing'
 
 type Step = {
   id: number
@@ -22,23 +26,47 @@ const STEPS: Step[] = [
   { id: 3, title: "Bank",         desc: "Set up your bank account for payouts",     route: "/partner/onboarding/bank" },
   { id: 4, title: "Review",       desc: "Our team will review your profile" },
   { id: 5, title: "Video KYC",    desc: "Complete a quick video verification" },
-  { id: 6, title: "Pricing",      desc: "Choose your pricing plan" },
+ { id: 6, title: "Pricing", desc: "Choose your pricing plan", route: "#" },
   { id: 7, title: "Final Review", desc: "Final review before going live" },
   { id: 8, title: "Live",         desc: "Your account is activated!" },
 ]
+
+
 
 function PartnerDashboard() {
   const [activeStep, setActiveStep] = useState(1)
   const { userData } = useSelector((state: RootState) => state.user)
   const router = useRouter()
+  const [loading,setLoading] = useState(false)
+  const [pricing,setPricing]=useState(false)
+  const [vehicleData,setVehicleData] = useState<IVehicle | null>()
+
+
+  useEffect(() => {
+  const fetchVehicle = async () => {
+  try {
+    const { data } = await axios.get("/api/auth/partner/onboarding/vehicles")
+    const vehicle = data?.vehicle ?? data?.data ?? data
+    if (vehicle?.type) setVehicleData(vehicle)
+  } catch (e) {
+    console.error(e)
+  }
+}
+  fetchVehicle()
+}, [])
 
   useEffect(() => {
     if (userData) setActiveStep(userData.partnerStep || 1)
   }, [userData])
 
   const handleStepClick = (s: Step) => {
-    if (s.route) router.push(s.route)
+  console.log("clicked", s.id, userData?.partnerStatus, userData?.videoKycStatus)
+  if(s.id == 6 && userData?.partnerStatus=='approved' && userData.videoKycStatus=='approved'){
+    setPricing(true)
+    return
   }
+  if (s.route) router.push(s.route)
+}
 
   // ✅ Fix: activeStep is 1-based, STEPS array is 0-indexed, so subtract 1
   const currentStep = STEPS[activeStep - 1]
@@ -66,7 +94,8 @@ function PartnerDashboard() {
               // ✅ Fix: done = steps before current, active = current step (no +1)
               const done = s.id < activeStep
               const active = s.id === activeStep
-              const clickable = done && !!s.route
+              const clickable = (done && !!s.route) ||
+  (s.id === 6 && userData?.partnerStatus === 'approved' && userData?.videoKycStatus === 'approved')
 
               return (
                 <div
@@ -141,6 +170,7 @@ function PartnerDashboard() {
         {
           userData?.partnerStep ==5 && userData?.partnerStatus === "approved" &&(
             <StatusCard 
+            status="approved"
              icon ={<Check size={18} />}
              title={"Partner Details approved "}
              desc={"Partner Details approved successfully by our team and now procced next steps"}
@@ -151,6 +181,7 @@ function PartnerDashboard() {
         {
           userData?.partnerStep == 6 &&  userData?.videoKycStatus === "approved" ?(
              <StatusCard 
+             status="approved"
              icon ={<Check size={18} />}
              title={"Video kyc approved "}
              desc={"Video KYC approved successfully by our team .You can now proceed to pricing"}
@@ -159,10 +190,22 @@ function PartnerDashboard() {
             <RejectionCard 
             title="Video KYC Rejected"
             reason={userData.videoKycRejectionReason}
-            actionLabel ={`Request Again`}
-            onAction={()=>{
-              router.push("")
-            }}
+            actionLabel ={loading ?"Requesting..." :"Request Again"}
+            onAction={async () => {
+  setLoading(true)
+  try {
+    const { data } = await axios.get('/api/auth/partner/video-kyc/request')
+    if(data?.success === false) {
+      toast.error(data.message)
+      return
+    }
+    toast.success("Request sent successfully!")
+  } catch(err) {
+    toast.error("Something went wrong")
+  } finally {
+    setLoading(false)
+  }
+}}
             />
           ):userData?.partnerStep == 5 && userData?.videoKycStatus === "in_progress" && userData.videoKycRoomId ?(
            <ActionCard
@@ -171,7 +214,7 @@ function PartnerDashboard() {
             button={"Join Call"}
             onClick={()=>router.push(`video-kyc/${userData.videoKycRoomId}`)}
            />
-          ):(
+          ):userData?.partnerStep ==5 &&(
              <StatusCard 
              icon ={<Clock size={18} />}
              title={"Waiting for Admin "}
@@ -179,7 +222,44 @@ function PartnerDashboard() {
             />
           )
         }
+
+
+        {userData?.partnerStep == 7 && vehicleData?.status === 'pending' && (
+  <StatusCard
+    icon={<Clock size={18} />}
+    title={"Pricing under review"}
+    desc={"Admin will review your pricing shortly."}
+  />
+)}
+
+{userData?.partnerStep == 7 && vehicleData?.status === 'rejected' && (
+  <RejectionCard
+    title="Pricing Rejected"
+    reason={vehicleData.rejectionReason}
+    actionLabel="Update Pricing"
+    onAction={() => setPricing(true)}
+  />
+)}
+
+{userData?.partnerStep == 8 && vehicleData?.status === 'approved' && (
+  <ActionCard
+    icon={<Rocket size={18} />}
+            title={"Pricing Approved by admin. Now you're Live!!"}
+            button={"Go to bookings"}
+            onClick={()=>router.push(`/`)}
+  />
+)}
       </div>
+
+        <Pricing 
+         open={pricing}
+         onClose={setPricing}
+         data={vehicleData ?? null}
+        />
+
+      
+
+
     </div>
   )
 }

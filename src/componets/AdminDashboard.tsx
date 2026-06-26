@@ -31,7 +31,7 @@ const [vehicleReviews, setVehicleReviews] = useState<any[]>([])
     const {data} = await axios.get("/api/auth/admin/dashboard")
     setStats(data.stats)
     setPartnerReviews(data.pendingPartnerForReviews)
-
+    setVehicleReviews(data.pendingVehicles)
   } catch (error) {
     console.log(error)
   }

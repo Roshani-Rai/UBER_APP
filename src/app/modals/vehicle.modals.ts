@@ -4,7 +4,7 @@ import mongoose from "mongoose"
 type vehicleType= "bike" | "car" | "loading" | "truck" | "auto"
 
 
-interface IVehicle{
+export interface IVehicle extends Document{
     owner:mongoose.Types.ObjectId
     type:vehicleType,
     vehicleModel:string,
@@ -18,6 +18,8 @@ interface IVehicle{
     isActive:boolean,
     createdAt:Date,
     updatedAt:Date,
+    pricingUpdated:boolean
+    vehicleUpdated:boolean
 }
 
 const vehicleSchema = new mongoose.Schema<IVehicle>({
@@ -62,7 +64,9 @@ const vehicleSchema = new mongoose.Schema<IVehicle>({
   isActive:{
     type:Boolean,
     deafult:true
-  }
+  },
+  pricingUpdated: { type: Boolean, default: false },
+  vehicleUpdated: { type: Boolean, default: false },
 },{timestamps:true})
 
 const Vehicle = mongoose.models.Vehicle || mongoose.model('Vehicle',vehicleSchema)
