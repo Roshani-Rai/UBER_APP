@@ -1,12 +1,12 @@
 import axios from 'axios'
-import { CheckCircle2, Clock, Truck, User, Users, Users2, Video, XCircle } from 'lucide-react'
+import { CheckCircle2, Clock, LogOut, Truck, User, Users, Users2, Video, XCircle } from 'lucide-react'
 import Image from 'next/image'
 import React, { useEffect, useState } from 'react'
 import Kpi from './Kpi'
 import TapButton from './TapButton'
 import { AnimatePresence ,motion} from 'motion/react'
 import ContentList from './ContentList'
-
+import { signOut } from "next-auth/react"
 
 type Stats ={
   totalApprovedPartners:number,
@@ -60,10 +60,19 @@ const [vehicleReviews, setVehicleReviews] = useState<any[]>([])
                <Image src={"/logo.jpg"} alt="" width={44} height={44} priority />
                
             </div>
-            <div className='flex items-center gap-2 text-xs px-3 py-1.5 rounded-full bg-black text-white'>
-                   <User size={14} />
-                   Admin Dashboard
-            </div>
+            <div className='flex items-center gap-3'>
+  <div className='flex items-center gap-2 text-xs px-3 py-1.5 rounded-full bg-black text-white'>
+    <User size={14} />
+    Admin Dashboard
+  </div>
+  <button
+  onClick={() => signOut({ callbackUrl: "/signin" })}
+  className='flex items-center gap-2 text-[12px] px-3 py-1.5 rounded-full border  text-white bg-black/90 cursor-pointer hover:bg-black  transition-all'
+>
+  <LogOut size={14} />
+  Logout
+</button>
+</div>
          </div>
 
       </div>

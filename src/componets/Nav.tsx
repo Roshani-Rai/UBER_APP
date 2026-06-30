@@ -1,5 +1,5 @@
 "use client"
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from "motion/react"
 import Image from 'next/image'
 import Link from 'next/link'
@@ -11,6 +11,8 @@ import { Bike, Car, ChevronRight, LogOut, Menu, Truck, X, FileText } from 'lucid
 import { signOut } from 'next-auth/react'
 import { setUserData } from '@/redux/userSlice'
 import { toast } from 'react-toastify'
+import axios from 'axios'
+import { setUncaughtExceptionCaptureCallback } from 'process'
 
 
 function Nav() {
@@ -18,7 +20,7 @@ function Nav() {
   const [open, setOpen] = useState(false)
   const [profile, setProfile] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
-
+ const [count,setCount]=useState(0)
   const router = useRouter()
   const pathname = usePathname()
   const navitem = ["Home", "Booking", "About Us", "Contact Us"]
@@ -36,8 +38,24 @@ function Nav() {
     }
   }
 
+  const fetchCount = async()=>{
+    try {
+      const {data,status} = await axios.get('/api/auth/partner/bookings/pending-requests')
+      
+        console.log(data)
+        setCount(data)
+       
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+  useEffect(()=>{
+    if(userData?.role == 'partner')
+      fetchCount()
+  },[userData?.role=='partner'])
   // ✅ Check if user has completed onboarding (partnerStep >= 3)
-  const isPartnerComplete = userData?.partnerStep >= 1
+  const isPartnerComplete = userData?.partnerStep! >= 1
 
   return (
     <>
@@ -50,7 +68,17 @@ function Nav() {
           <Image src={"/logo.jpg"} alt="" width={44} height={44} />
 
           <div className='hidden md:flex items-center gap-10'>
-            {navitem.map((i, index) => {
+            {userData?.role =='partner' ?(
+              <>
+              <Link href={'/'} className='relative text-sm font-medium text-gray-300 hover:text-white transition'>Home</Link>
+              <Link href={'/partner/pending-requests'} className='relative text-sm font-medium text-gray-300 hover:text-white transition'>Pending Requests
+              <span className='absolute -top-2 -right-5 w-5 h-5 bg-white text-black text-xs rounded-full flex items-center justify-center font-bold'>{count ?? 0}</span>
+              </Link>
+              <Link href={'/partner/bookings'} className='relative text-sm font-medium text-gray-300 hover:text-white transition'>Booking</Link>
+              <Link href={'/partner/active-ride'} className='relative text-sm font-medium text-gray-300 hover:text-white transition'>Active Rides</Link>
+              </>
+            ):
+             navitem.map((i, index) => {
               const href = i === "Home" ? "/" : `/${i.toLowerCase()}`
               const active = href === pathname
               return (
@@ -65,6 +93,8 @@ function Nav() {
                 </Link>
               )
             })}
+            
+           
           </div>
 
           <div className='flex items-center gap-3'>

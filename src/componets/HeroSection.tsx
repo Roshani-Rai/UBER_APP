@@ -1,15 +1,19 @@
 "use client"
-import React from 'react'
+import React, { useEffect } from 'react'
 import { motion } from "motion/react"
 import { Bike, Bus, Car, Truck } from 'lucide-react'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/redux/store'
 import { useRouter } from 'next/navigation'
+import { getSocket } from '@/app/lib/socket'
 
 function HeroSection({authRequired}:{authRequired:()=>void}) {
 
    const router = useRouter()
    const {userData} = useSelector((state:RootState)=>state.user)
+
+  
+  
 
   return (
     <div className='relative min-h-screen w-full overflow-hidden'>

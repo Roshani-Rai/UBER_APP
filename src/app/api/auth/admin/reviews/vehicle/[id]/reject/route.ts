@@ -32,6 +32,7 @@ export async function POST (
 
        vehicle.status='rejected'
        vehicle.rejectionReason=reason
+       vehicle.isActive=false
 
        await vehicle.save()
 

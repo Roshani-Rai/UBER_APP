@@ -1,34 +1,19 @@
-"use client"
-import { useSelector } from 'react-redux'
-import { RootState } from '@/redux/store'
-import AdminDashboard from "@/componets/AdminDashboard"
-import Footer from "@/componets/Footer"
-import Nav from "@/componets/Nav"
-import PartnerDashboard from "@/componets/PartnerDashboard"
-import PublicHome from "@/componets/PublicHome"
+// NO "use client" here
+import { auth } from '@/auth'
+import connectDb from './lib/db'
+import User from './modals/user.modals'
+import HomeClient from '@/componets/HomeClient'
 
-export default function Home() {
-  const { userData } = useSelector((state: RootState) => state.user)
+
+export default async function Home() {
+  const session = await auth()
+  await connectDb()
+  const user = await User.findOne({ email: session?.user?.email }).lean()
 
   return (
-    <div className="w-full min-h-screen bg-white">
-     
-      {userData?.role === 'partner' ? (
-        <>
-         <Nav />
-         <PartnerDashboard />
-        </>
-       
-      ) : userData?.role === 'admin' ? (
-        <AdminDashboard />
-      ) : (
-        <>
-        <Nav />
-         <PublicHome />
-        </>
-       
-      )}
-      <Footer />
-    </div>
+    <HomeClient
+      userId={user?._id?.toString()}
+      role={user?.role}
+    />
   )
 }

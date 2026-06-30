@@ -20,7 +20,7 @@ function RejectionCard({ title, reason, actionLabel, onAction }: any) {
       <div className="rounded-xl border border-red-100 bg-white px-4 py-3 flex flex-col gap-1">
         <span className="text-xs text-gray-400 font-medium">Rejection Reason</span>
         <p className="text-sm text-gray-700 font-medium leading-relaxed">
-          {reason }
+          {reason || 'No reason provided.'}
         </p>
       </div>
 

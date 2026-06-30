@@ -29,6 +29,7 @@ export async function GET (
        }
 
        vehicle.status='approved'
+       vehicle.isActive=true
        vehicle.rejectionReason=undefined
 
        await vehicle.save()

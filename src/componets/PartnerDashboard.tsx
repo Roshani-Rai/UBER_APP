@@ -246,7 +246,7 @@ function PartnerDashboard() {
     icon={<Rocket size={18} />}
             title={"Pricing Approved by admin. Now you're Live!!"}
             button={"Go to bookings"}
-            onClick={()=>router.push(`/`)}
+            onClick={()=>router.push(`/user/book`)}
   />
 )}
       </div>
