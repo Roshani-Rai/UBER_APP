@@ -6,6 +6,8 @@ import { MapPin, Navigation, Clock, Inbox, ArrowLeft } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import React, { useEffect, useState } from 'react'
 import { toast } from 'react-toastify'
+import { getSocket } from '@/app/lib/socket'
+import { Preahvihear } from 'next/font/google'
 
 function page() {
   const router = useRouter()
@@ -27,13 +29,23 @@ function page() {
     }
   }
 
+  useEffect(()=>{
+    const socket = getSocket()
+    socket.on('new-booking',(data)=>{
+      setPending((prev)=>[...prev,data])
+    })
+    return ()=>{
+      socket.off('new-booking')
+    }
+
+  })
   const handleAccept = async (id: string) => {
     try {
       setAcceptingId(id)
       const { data } = await axios.get(`/api/auth/partner/bookings/${id}/accept`)
       toast.success('Booking accepted successfully!!')
       setPending((prev) => prev.filter((b) => b._id !== id))
-      console.log(data)
+      router.push('/partner/bookings')
     } catch (error) {
       console.log(error)
       toast.error('Could not accept this ride')
@@ -48,7 +60,7 @@ function page() {
       const { data } = await axios.get(`/api/auth/partner/bookings/${id}/reject`)
       toast.success('Booking rejected successfully!!')
       setPending((prev) => prev.filter((b) => b._id !== id))
-      console.log(data)
+     window.location.reload()
     } catch (error) {
       console.log(error)
       toast.error('Could not reject this ride')

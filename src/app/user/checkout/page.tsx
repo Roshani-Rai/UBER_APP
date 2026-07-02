@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import axios from 'axios'
 import { toast } from 'react-toastify'
+import { getSocket } from '@/app/lib/socket'
 
 const ICONS: any = {
   bike: Bike,
@@ -31,6 +32,11 @@ const ICONS: any = {
 type status = 'idle' | 'requested' | 'awaiting_payment' | 'rejected' | 'expired' | 'cancelled' | 'payment' | 'confirmed'
 type paymentMethod = 'cash' | 'online'
 
+// Statuses that mean "this ride is still in progress" — anything else
+// (completed / cancelled / rejected / expired / null) should NOT be
+// treated as an active booking on load.
+const ACTIVE_STATUSES: status[] = ['requested', 'awaiting_payment', 'payment', 'confirmed']
+
 function Page() {
   const router = useRouter()
   const params = useSearchParams()
@@ -41,18 +47,26 @@ function Page() {
   const [cancelling, setCancelling] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<paymentMethod>('online')
   const [paying, setPaying] = useState(false)
+  const [checkingActive, setCheckingActive] = useState(true)
 
   const driverId = params.get('driverId')
   const vehicleId = params.get('vehicleId')
-  const vehicleType = params.get('vehicleType') || ''
-  const pickup = params.get('pickup') || ''
-  const drop = params.get('drop') || ''
+  const vehicleTypeParam = params.get('vehicleType') || ''
+  const pickupParam = params.get('pickup') || ''
+  const dropParam = params.get('drop') || ''
   const mobile = params.get('mobile') || ''
   const pickupLat = params.get('pickuplat')
   const pickupLon = params.get('pickuplon')
   const dropLat = params.get('droplat')
   const dropLon = params.get('droplon')
-  const price = params.get('price')
+  const priceParam = params.get('price')
+
+  // Prefer live booking data once it exists; fall back to URL params
+  // for a fresh, not-yet-created booking.
+  const vehicleType = booking?.vehicle?.type || vehicleTypeParam
+  const pickup = booking?.pickUpAddress || pickupParam
+  const drop = booking?.dropAddress || dropParam
+  const price = booking?.fare ?? priceParam
 
   const Icon = ICONS[vehicleType?.toLowerCase()] || Car
 
@@ -62,8 +76,8 @@ function Page() {
       const { data, status: httpStatus } = await axios.post('/api/auth/booking/create', {
         vehicleId,
         driverId,
-        pickUpAddress: pickup,
-        dropAddress: drop,
+        pickUpAddress: pickupParam,
+        dropAddress: dropParam,
         pickUpLocation: {
           type: 'Point',
           coordinates: [Number(pickupLon), Number(pickupLat)],
@@ -72,7 +86,7 @@ function Page() {
           type: 'Point',
           coordinates: [Number(dropLon), Number(dropLat)],
         },
-        fare: price,
+        fare: priceParam,
         mobileNumber: mobile,
       })
 
@@ -93,15 +107,25 @@ function Page() {
   const fetchActiveBooking = async () => {
     try {
       const { data } = await axios.get('/api/auth/booking/active')
-      setBooking(data.booking)
+      const activeBooking = data?.booking
+      const activeStatus = activeBooking?.bookingStatus as status | undefined
 
-      if (data?.booking?.bookingStatus) {
-        setStatus(data.booking.bookingStatus)
+      // Guard: only treat this as "active" if the status is genuinely
+      // still in progress. This protects against a backend that returns
+      // the user's most recent booking regardless of status.
+      if (activeBooking && activeStatus && ACTIVE_STATUSES.includes(activeStatus)) {
+        setBooking(activeBooking)
+        setStatus(activeStatus)
       } else {
+        setBooking(null)
         setStatus('idle')
       }
     } catch (error) {
       console.log(error)
+      setBooking(null)
+      setStatus('idle')
+    } finally {
+      setCheckingActive(false)
     }
   }
 
@@ -109,7 +133,7 @@ function Page() {
     if (!booking?._id) return
     try {
       setCancelling(true)
-      await axios.post(`/api/auth/booking/${booking._id}/cancel`)
+      await axios.get(`/api/auth/booking/${booking._id}/cancel`)
       setStatus('idle')
       setBooking(null)
       setConfirmed(false)
@@ -123,22 +147,127 @@ function Page() {
     }
   }
 
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      if (typeof window === 'undefined') {
+        resolve(false)
+        return
+      }
+      if ((window as any).Razorpay) {
+        resolve(true)
+        return
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+      script.onload = () => resolve(true)
+      script.onerror = () => resolve(false)
+      document.body.appendChild(script)
+    })
+  }
+
   const handleProceedToPayment = async () => {
-    if (!booking?._id) return
+    if (!booking?._id || !paymentMethod) return
+
     try {
       setPaying(true)
-      await axios.post(`/api/auth/booking/${booking._id}/pay`, {
-        method: paymentMethod,
+
+      if (paymentMethod === 'cash') {
+        await axios.get(`/api/auth/booking/${booking._id}/confirm`)
+        setStatus('confirmed')
+        toast.success('Booking confirmed! Pay the driver in cash.')
+        setPaying(false)
+        return
+      }
+
+      // Online payment flow
+      const razorpayLoaded = await loadRazorpayScript()
+      if (!razorpayLoaded) {
+        toast.warn('Razorpay script failed to load')
+        setPaying(false)
+        return
+      }
+
+      const { data: orderData } = await axios.post('/api/auth/payment/create', {
+        bookingId: booking._id,
       })
-      setStatus('confirmed')
-      toast.success('Payment successful!')
+
+      if (!orderData?.success) {
+        toast.error(orderData?.message || 'Could not create payment order')
+        setPaying(false)
+        return
+      }
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: 'RYDEX',
+        description: 'Ride Payment',
+        order_id: orderData.orderId,
+        handler: async function (response: any) {
+          try {
+            const { data: verifyData } = await axios.post('/api/auth/payment/verify', {
+              bookingId: booking._id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_signature: response.razorpay_signature,
+            })
+
+            if (verifyData?.success) {
+              setStatus('confirmed')
+              toast.success('Payment successful!')
+            } else {
+              toast.error(verifyData?.message || 'Payment verification failed')
+            }
+          } catch (err) {
+            console.log(err)
+            toast.error('Payment verification failed')
+          } finally {
+            setPaying(false)
+          }
+        },
+        modal: {
+          ondismiss: function () {
+            setPaying(false)
+          },
+        },
+        theme: {
+          color: '#18181b',
+        },
+      }
+
+      const paymentObject = new (window as any).Razorpay(options)
+
+      paymentObject.on('payment.failed', function (response: any) {
+        console.log(response.error)
+        toast.error('Payment failed. Please try again.')
+        setPaying(false)
+      })
+
+      paymentObject.open()
     } catch (error: any) {
       console.log(error)
-      toast.error(error?.message || 'Payment failed')
-    } finally {
+      toast.error(error?.response?.data?.message || error?.message || 'Payment failed')
       setPaying(false)
     }
   }
+
+
+  useEffect(()=>{
+    const socket = getSocket()
+    socket.on('accept-booking',(data)=>{
+      setStatus(data)
+    })
+    socket.on('reject-booking',(data)=>{
+      setStatus(data)
+    })
+    return ()=>{
+      socket.off('accept-booking')
+      socket.off('reject-booking')
+    }
+
+  })
 
   useEffect(() => {
     if (status !== 'awaiting_payment') return
@@ -161,34 +290,16 @@ function Page() {
     return () => clearInterval(interval)
   }, [status])
 
-  // Success screen
-  if (status === 'confirmed') {
+  // Avoid a flash of the wrong panel while we're still checking
+  // for an existing active booking on first load.
+  if (checkingActive) {
     return (
-      <div className='min-h-screen bg-zinc-100 flex items-center justify-center px-4'>
+      <div className='min-h-screen bg-zinc-100 flex items-center justify-center'>
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className='bg-white rounded-3xl border border-zinc-200 shadow-[0_4px_24px_rgba(0,0,0,0.07)] p-6 sm:p-10 flex flex-col items-center text-center max-w-sm w-full'
-        >
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-            className='w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center mb-5'
-          >
-            <CheckCircle2 size={36} className='text-emerald-500' />
-          </motion.div>
-          <h2 className='text-xl sm:text-2xl font-black text-zinc-900 mb-2'>Booking Confirmed!</h2>
-          <p className='text-zinc-400 text-sm mb-8'>Your ride has been booked. Driver will contact you shortly.</p>
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={() => router.push('/')}
-            className='w-full bg-zinc-900 text-white py-4 rounded-2xl font-black text-sm hover:bg-black transition-colors'
-          >
-            Back to Home
-          </motion.button>
-        </motion.div>
+          animate={{ rotate: 360 }}
+          transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}
+          className='w-8 h-8 border-2 border-zinc-300 border-t-zinc-900 rounded-full'
+        />
       </div>
     )
   }
@@ -224,7 +335,7 @@ function Page() {
         {/* Two column layout */}
         <div className='grid grid-cols-1 md:grid-cols-2 gap-5 items-stretch'>
 
-          {/* LEFT: vehicle + route + fare combined card */}
+          {/* LEFT: vehicle + route + fare — uses live booking data if present, else URL params */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -284,7 +395,7 @@ function Page() {
             </div>
           </motion.div>
 
-          {/* RIGHT: confirm / waiting / awaiting-payment / payment panel */}
+          {/* RIGHT: confirm / waiting / awaiting-payment / payment / confirmed panel */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -366,7 +477,6 @@ function Page() {
                   transition={{ duration: 0.25 }}
                   className='p-5 sm:p-6 flex-1 flex flex-col items-center justify-center text-center gap-1'
                 >
-                  {/* Radar / bubble pulse */}
                   <div className='relative w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center mb-6'>
                     {[0, 1, 2].map((i) => (
                       <motion.span
@@ -536,6 +646,42 @@ function Page() {
                         <ArrowLeft size={16} className='rotate-180' />
                       </>
                     )}
+                  </motion.button>
+                </motion.div>
+              )}
+
+              {status === 'confirmed' && (
+                /* ---- CONFIRMED: green check + track ride ---- */
+                <motion.div
+                  key='confirmed'
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className='p-5 sm:p-6 flex-1 flex flex-col items-center justify-center text-center gap-1'
+                >
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
+                    className='w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center mb-5'
+                  >
+                    <CheckCircle2 size={32} className='text-emerald-500' />
+                  </motion.div>
+
+                  <h2 className='text-lg sm:text-xl font-black text-zinc-900'>Ride Confirmed!</h2>
+                  <p className='text-zinc-400 text-sm mb-6 max-w-[220px]'>
+                    Your driver is on the way. Track live from the ride screen.
+                  </p>
+
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    whileHover={{ scale: 1.01 }}
+                    onClick={() => router.push(`/ride/${booking._id}`)}
+                    className='w-full max-w-[220px] bg-zinc-900 hover:bg-black text-white py-3.5 rounded-2xl font-black text-sm transition-colors shadow-md flex items-center justify-center gap-2'
+                  >
+                    Track Your Ride
+                    <ArrowLeft size={15} className='rotate-180' />
                   </motion.button>
                 </motion.div>
               )}

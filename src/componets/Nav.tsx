@@ -23,7 +23,7 @@ function Nav() {
  const [count,setCount]=useState(0)
   const router = useRouter()
   const pathname = usePathname()
-  const navitem = ["Home", "Booking", "About Us", "Contact Us"]
+  const navitem = ["Home", "Bookings", "About Us", "Contact Us"]
   const dispatch = useDispatch()
   
   const handleLogout = async () => {
@@ -79,7 +79,7 @@ function Nav() {
               </>
             ):
              navitem.map((i, index) => {
-              const href = i === "Home" ? "/" : `/${i.toLowerCase()}`
+              const href = i === "Home" ? "/" : `/user/${i.toLowerCase()}`
               const active = href === pathname
               return (
                 <Link

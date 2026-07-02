@@ -2,6 +2,7 @@ import connectDb from "@/app/lib/db";
 import Booking from "@/app/modals/booking.modals";
 import User from "@/app/modals/user.modals";
 import { auth } from "@/auth";
+import axios from "axios";
 import mongoose from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -52,6 +53,12 @@ export async function POST(req:NextRequest){
                driverMobileNumber:driver.mobileNumber,
                bookingStatus:"requested"
             
+          })
+
+          await axios.post(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL}/emit`,{
+            event:'new-booking',
+            userId:driverId,
+            data:booking
           })
 
         return NextResponse.json(booking,{status:200})
