@@ -13,6 +13,7 @@ import { setUserData } from '@/redux/userSlice'
 import { toast } from 'react-toastify'
 import axios from 'axios'
 import { setUncaughtExceptionCaptureCallback } from 'process'
+import { getSocket } from '@/app/lib/socket'
 
 
 function Nav() {
@@ -49,6 +50,19 @@ function Nav() {
       console.log(error)
     }
   }
+
+
+  
+    useEffect(()=>{
+      const socket = getSocket()
+      socket.on('new-booking',(data)=>{
+        setCount(prev=>prev+1)
+      })
+      return ()=>{
+        socket.off('new-booking')
+      }
+  
+    })
 
   useEffect(()=>{
     if(userData?.role == 'partner')
@@ -223,7 +237,7 @@ function Nav() {
 
               <div className='flex flex-col p-5 gap-1'>
                 {navitem.map((i, index) => {
-                  const href = i === "Home" ? "/" : `/${i.toLowerCase()}`
+                  const href = i === "Home" ? "/" : `/user/${i.toLowerCase()}`
                   const active = href === pathname
                   return (
                     <Link

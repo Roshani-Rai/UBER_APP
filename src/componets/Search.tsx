@@ -32,7 +32,7 @@ const pickupIcon = new L.DivIcon({
                 width:16px;height:16px;background:#22c55e;
                 border:3px solid white;border-radius:50%;
                 box-shadow:0 2px 6px rgba(0,0,0,0.4);
-            "></div>
+            ">PICKUP</div>
             <div style="width:2px;height:10px;background:#22c55e;"></div>
         </div>
     `,
@@ -49,7 +49,7 @@ const dropIcon = new L.DivIcon({
                 border:3px solid white;border-radius:50% 50% 50% 0;
                 transform:rotate(-45deg);box-shadow:0 4px 10px rgba(239,68,68,0.5);
                 display:flex;align-items:center;justify-content:center;
-            ">
+            ">DROP
                 <div style="
                     width:8px;height:8px;background:white;
                     border-radius:50%;transform:rotate(45deg);

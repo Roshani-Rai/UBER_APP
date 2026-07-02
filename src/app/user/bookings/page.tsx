@@ -214,7 +214,7 @@ function BookingCard({ booking, index }: { booking: IBookingPopulated; index: nu
         </div>
         <button
           onClick={() => router.push(`/user/ride/${booking._id}`)}
-          className='cursor-pointer flex items-center gap-1 text-sm font-bold text-blue-600 bg-blue-100 px-3 py-1 rounded-full hover:text-blue-700 transition-colors flex-shrink-0'
+          className='cursor-pointer flex items-center gap-1 text-sm font-bold text-blue-600 bg-blue-100 px-3 py-1 rounded-lg hover:text-blue-700 transition-colors flex-shrink-0'
         >
           Details
           <ChevronRight size={15} />

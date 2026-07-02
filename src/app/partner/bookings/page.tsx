@@ -92,7 +92,7 @@ function PaymentPill({ paymentStatus }: { paymentStatus: string }) {
   const map: Record<string, { text: string; bg: string; label: string }> = {
     paid: { text: 'text-emerald-700', bg: 'bg-emerald-100', label: 'Paid' },
     pending: { text: 'text-amber-700', bg: 'bg-amber-100', label: 'Pending' },
-    cash_pending: { text: 'text-amber-700', bg: 'bg-amber-100', label: 'Cash Pending' },
+    cash: { text: 'text-amber-700', bg: 'bg-amber-100', label: 'Cash Pending' },
     failed: { text: 'text-red-700', bg: 'bg-red-100', label: 'Failed' },
   }
   const cfg = map[paymentStatus] ?? { text: 'text-zinc-600', bg: 'bg-zinc-100', label: paymentStatus || '—' }
@@ -188,12 +188,17 @@ const router = useRouter()
           Payment:
           <PaymentPill paymentStatus={booking.paymentStatus} />
         </div>
-        <button
+       {
+       ( booking.bookingStatus==='completed' || booking.bookingStatus==='confirmed' || booking.bookingStatus==='started') &&
+        (
+           <button
          onClick={()=>router.push('/partner/active-ride')}
-        className='cursor-pointer rounded-full hover:scale:105 flex items-center gap-1 text-sm font-bold bg-blue-100 px-3 py-1 text-blue-600 hover:text-blue-700 transition-colors flex-shrink-0'>
+        className='cursor-pointer rounded-lg hover:scale:105 flex items-center gap-1 text-sm font-bold bg-blue-100 px-3 py-1 text-blue-600 hover:text-blue-700 transition-colors flex-shrink-0'>
           Details
           <ChevronRight size={15} />
         </button>
+        )
+       }
       </div>
     </motion.div>
   )
